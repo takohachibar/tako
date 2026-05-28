@@ -1,0 +1,91 @@
+// ==UserScript==
+// @name        OldTweetDeck Prevent Account Switch (Strict Sync)
+// @namespace   Violentmonkey Scripts
+// @version     2.2
+// @description  リプライ時に勝手にメインアカウントに戻るのを防ぎ、ポスト元のアカウントにFromを強制同期する
+// @author       tako
+// @match        https://x.com/i/tweetdeck
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    setInterval(function() {
+        // 1. ツイート入力エリア（From選択エリア）を取得
+        const composeArea = document.querySelector('.js-composer, [data-testid="composeArea"], .compose');
+        if (!composeArea) return;
+
+        // 2. 現在リプライしようとしている対象のツイート情報を取得
+        const replyTarget = document.querySelector('.js-reply-to-info, .compose-reply-tweet, .reply-to-tweet');
+        if (!replyTarget) return;
+
+        // リプライ対象ツイートの投稿者ID（スクリーンネーム）を取得
+        let targetAccountID = "";
+        const accountLink = replyTarget.querySelector('.username, [data-user-name]');
+        if (accountLink) {
+            targetAccountID = (accountLink.textContent || accountLink.getAttribute('data-user-name') || "").replace('@', '').trim().toLowerCase();
+        }
+
+        // 対象のアカウントIDが取得できなかった場合は処理をスキップ
+        if (!targetAccountID) return;
+
+        // 3. From欄のアカウントアイコン一覧をスキャン
+        const allAccounts = composeArea.querySelectorAll('.compose-account, [data-testid="composeAccount"]');
+        let targetAccountEl = null;
+        let currentSelectedEl = null;
+
+        allAccounts.forEach(acc => {
+            // アイコンの各種属性（title, alt）を小文字化して整理
+            const titleText = (acc.getAttribute('title') || "").toLowerCase();
+            const altText = (acc.getAttribute('alt') || "").toLowerCase();
+            const dataName = (acc.getAttribute('data-user-name') || "").toLowerCase();
+            const innerText = (acc.innerText || "").toLowerCase();
+
+            // 【超重要修正】 部分一致（includes）ではなく、文字列が完全に一致しているか、
+            // または「 @takohachibar1 」のように前後に区切りがある形で厳密にチェックする
+            // これにより、末尾に「0」などがついた別のアカウントへの誤爆を防ぎます
+            const isStrictMatch =
+                titleText === targetAccountID ||
+                titleText.endsWith('@' + targetAccountID) ||
+                titleText.includes('(' + targetAccountID + ')') ||
+                altText === targetAccountID ||
+                dataName === targetAccountID ||
+                innerText === targetAccountID;
+
+            if (isStrictMatch) {
+                targetAccountEl = acc;
+            }
+
+            // 現在選択されているアカウントを特定
+            if (acc.classList.contains('is-selected') || acc.getAttribute('aria-selected') === 'true' || acc.querySelector('.icon-verified, .is-active')) {
+                currentSelectedEl = acc;
+            }
+        });
+
+        // 4. 強制同期・切り替え処理
+        // 正しく抽出されたアカウントが見つかっており、かつ現在のFrom欄でそれが選択されていない場合
+        if (targetAccountEl && targetAccountEl !== currentSelectedEl) {
+
+            // 旧来の選択状態（緑のチェックマーク等）をクラスレベルで強制剥奪
+            if (currentSelectedEl) {
+                currentSelectedEl.classList.remove('is-selected');
+                currentSelectedEl.setAttribute('aria-selected', 'false');
+                const checkMark = currentSelectedEl.querySelector('.icon-verified');
+                if (checkMark) checkMark.remove();
+            }
+
+            // 新しいターゲットアカウントを強制アクティブ化
+            targetAccountEl.classList.add('is-selected');
+            targetAccountEl.setAttribute('aria-selected', 'true');
+
+            // 擬似クリックイベントを連打してOldTweetDeckの内部Stateを上書き
+            targetAccountEl.click();
+            targetAccountEl.focus();
+            targetAccountEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            targetAccountEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            targetAccountEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            targetAccountEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }, 50); // 0.05秒間隔で高速監視
+})();
