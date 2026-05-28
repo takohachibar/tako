@@ -2,7 +2,7 @@
 // @name        OldTweetDeck Prevent Account Switch (Strict Sync)
 // @namespace   Violentmonkey Scripts
 // @version     2.2
-// @description  リプライ時に勝手にメインアカウントに戻るのを防ぎ、ポスト元のアカウントにFromを強制同期する
+// @description  リプライ時に勝手にメインアカウントに戻るのを防ぎ、ポスト元のアカウントにFromを強制同期するスクリプト
 // @author       tako
 // @match        https://x.com/i/tweetdeck
 // @grant        none
