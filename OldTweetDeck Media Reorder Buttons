@@ -2,7 +2,7 @@
 // @name        OldTweetDeck Media Reorder Buttons (Description Docking)
 // @namespace   http://tampermonkey.net
 // @version     3.2
-// @description  画像のレイアウトを100%崩さず、説明欄の横に確実に並び替えボタンを合体
+// @description  画像のレイアウトを崩さず、説明欄の横に並び替えボタンを表示するスクリプト
 // @author       tako
 // @match        https://x.com/i/tweetdeck
 // @grant        none
